@@ -1,0 +1,7 @@
+/rebar.cmd
+/ErNineBot.iml
+/rebar
+/.idea
+/.rebar
+/ebin/*.app
+/ebin/*.beam
