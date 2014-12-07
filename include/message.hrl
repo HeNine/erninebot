@@ -1,15 +1,17 @@
--record(message,{
+-record(message, {
   prefix,
   command,
-  params = []
+  params = [],
+  last_param = [],
+  original
 }).
 
--record(userspec,{
+-record(userspec, {
   nickname,
   user,
   host
 }).
 
--record(serverspec,{
+-record(serverspec, {
   servername
 }).

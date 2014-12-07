@@ -16,17 +16,21 @@
 %% ===================================================================
 
 start_link() ->
-  supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 %% ===================================================================
 %% Supervisor callbacks
 %% ===================================================================
 
 init(_Args) ->
-  {ok, {{one_for_one, 5, 10},
-    [
-      ?CHILD(erninebot_parser_srv, worker),
-      ?CHILD(erninebot_io_srv, worker)
-    ]
-  }}.
+    {ok, {{one_for_one, 5, 10},
+        [
+            ?CHILD(enb_message_exchange_srv, worker),
+            ?CHILD(enb_console_log_srv, worker),
+            ?CHILD(enb_parser_srv, worker),
+            ?CHILD(enb_ping_srv, worker),
+            ?CHILD(enb_channel_srv, worker),
+            ?CHILD(enb_io_srv, worker)
+        ]
+    }}.
 

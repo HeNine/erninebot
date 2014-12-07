@@ -10,7 +10,7 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-  erninebot_sup:start_link().
+    erninebot_sup:start_link().
 
 stop(_State) ->
-  ok.
+    ok.

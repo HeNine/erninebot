@@ -1,0 +1,60 @@
+%% Connection registration
+PASS
+NICK
+USER
+OPER
+MODE
+SERVICE
+QUIT
+SQUIT
+
+%% Channel operations
+JOIN
+PART
+TOPIC
+NAMES
+LIST
+INVITE
+KICK
+
+%% Messages
+PRIVMSG
+NOTICE
+
+%% Server queries and commands
+MOTD
+LUSERS
+VERSION
+STATS
+LINKS
+TIME
+CONNECT
+TRACE
+ADMIN
+INFO
+
+%% Service query and commands
+SERVLIST
+SQUERY
+
+%% User based queries
+WHO
+WHOIS
+WHOWAS
+
+%% Miscellaneous messages
+KILL
+PING
+PONG
+ERROR
+
+%% Optional
+AWAY
+REHASH
+DIE
+RESTART
+SUMMON
+USERS
+WALLOPS
+USERHOST
+ISON

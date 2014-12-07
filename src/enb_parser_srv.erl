@@ -1,6 +1,8 @@
--module(erninebot_file_log_srv).
+-module(enb_parser_srv).
 -behaviour(gen_server).
 -define(SERVER, ?MODULE).
+
+-include("message.hrl").
 
 %% ------------------------------------------------------------------
 %% API Function Exports
@@ -13,7 +15,7 @@
 %% ------------------------------------------------------------------
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-         terminate/2, code_change/3]).
+    terminate/2, code_change/3]).
 
 %% ------------------------------------------------------------------
 %% API Function Definitions
@@ -29,6 +31,10 @@ start_link() ->
 init(Args) ->
     {ok, Args}.
 
+handle_call({parse, RawMessage}, _, State) ->
+    {reply, enb_message_parser:parse(RawMessage), State};
+handle_call({unparse, Message}, _, State) ->
+    {reply, enb_message_parser:unparse(Message), State};
 handle_call(_Request, _From, State) ->
     {reply, ok, State}.
 

@@ -1,6 +1,8 @@
--module(erninebot_message_exchange_srv).
+-module(enb_console_log_srv).
 -behaviour(gen_server).
 -define(SERVER, ?MODULE).
+
+-include("message.hrl").
 
 %% ------------------------------------------------------------------
 %% API Function Exports
@@ -13,7 +15,7 @@
 %% ------------------------------------------------------------------
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-         terminate/2, code_change/3]).
+    terminate/2, code_change/3]).
 
 %% ------------------------------------------------------------------
 %% API Function Definitions
@@ -27,12 +29,14 @@ start_link() ->
 %% ------------------------------------------------------------------
 
 init(Args) ->
+    gen_server:cast(enb_message_exchange_srv, {subscribe_to_all, self()}),
     {ok, Args}.
 
 handle_call(_Request, _From, State) ->
     {reply, ok, State}.
 
-handle_cast(_Msg, State) ->
+handle_cast({message, #message{original = RawMessage}}, State) ->
+    io:format("~s", [RawMessage]),
     {noreply, State}.
 
 handle_info(_Info, State) ->
