@@ -31,6 +31,8 @@ start_link() ->
 %% ------------------------------------------------------------------
 
 init(_Args) ->
+    enb_message_exchange_srv:subscribe(join),
+
     enb_message_exchange_srv:subscribe(rpl_welcome),
     enb_message_exchange_srv:subscribe(rpl_topic),
 
@@ -53,8 +55,14 @@ handle_call(_Request, _From, State) ->
     {reply, ok, State}.
 
 handle_cast({message, #message{command = rpl_welcome}}, State = #state{channels = Channels}) ->
-    enb_message_exchange_srv:send_message(#message{command = join, params = [string:join(Channels, ",")]}),
+    case Channels of
+        [] -> ok;
+        _ -> enb_message_exchange_srv:send_message(#message{command = join, params = [string:join(Channels, ",")]})
+    end,
     {noreply, State#state{joined = Channels}};
+handle_cast({message, #message{command = join, params = [ChannelList | _]}}, State = #state{channels = Channels}) ->
+    JoinChannels = re:split(ChannelList, ","),
+    {noreply, State#state{joined = JoinChannels ++ Channels}};
 handle_cast(_, State) ->
     {noreply, State}.
 
