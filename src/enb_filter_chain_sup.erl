@@ -1,15 +1,15 @@
--module(erninebot_sup).
+-module(enb_filter_chain_sup).
 
 -behaviour(supervisor).
 
 %% API
--export([start_link/0]).
+-export([start_link/0, add_chain/2]).
 
 %% Supervisor callbacks
 -export([init/1]).
 
 %% Helper macro for declaring children of supervisor
--define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
+-define(CHILD(Name, Module, Args, Type), {Name, {Module, start_link, Args}, permanent, 5000, Type, [Module]}).
 
 %% ===================================================================
 %% API functions
@@ -18,22 +18,20 @@
 start_link() ->
   supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
+add_chain(Name, ChainSpec) ->
+  {ok, Child} = supervisor:start_child(enb_filter_chain_sup, [Name, ChainSpec]),
+  Child.
+
 %% ===================================================================
 %% Supervisor callbacks
 %% ===================================================================
 
-init(_Args) ->
-  {ok, {{one_for_one, 5, 10},
-    [
-      ?CHILD(enb_filter_chain_sup, supervisor),
-      ?CHILD(enb_message_exchange_srv, worker),
-      ?CHILD(enb_console_log_srv, worker),
-      ?CHILD(enb_parser_srv, worker),
-      ?CHILD(enb_ping_srv, worker),
-      ?CHILD(enb_channel_srv, worker),
-      ?CHILD(enb_io_srv, worker),
-
-      ?CHILD(enb_echo_srv, worker)
-    ]
+init(_) ->
+  {ok, {{simple_one_for_one, 5, 10},
+    [{id,
+      {enb_filter_chain_srv, start_link, []},
+      permanent,
+      5000,
+      worker,
+      [enb_filter_chain_srv]}]
   }}.
-

@@ -9,7 +9,7 @@
         ]},
         {mod, {erninebot_app, []}},
         {env, [
-            {server, "192.168.56.101"},
+            {server, "172.17.0.1"},
             {port, 6667},
             {nickname, "ErNineBot"},
             {channels, ["#ErNineTestChannel"]}]}
