@@ -91,7 +91,7 @@ subscribe(Command) ->
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
 
-distribute(Message = #message{original = RawMessage}, Targets, Filter) ->
+distribute(Message, Targets, Filter) ->
   case gen_server:call(Filter, {filter, Message}) of
     filtered -> ok;
     _ -> lists:map(fun(Pid) -> gen_server:cast(Pid, {message, Message}) end, Targets)

@@ -27,13 +27,14 @@ init(_Args) ->
     [
       ?CHILD(enb_filter_chain_sup, supervisor),
       ?CHILD(enb_message_exchange_srv, worker),
+
       ?CHILD(enb_console_log_srv, worker),
       ?CHILD(enb_parser_srv, worker),
       ?CHILD(enb_ping_srv, worker),
       ?CHILD(enb_channel_srv, worker),
       ?CHILD(enb_io_srv, worker),
 
-      ?CHILD(enb_echo_srv, worker)
+      ?CHILD(erninebot_service_sup, supervisor)
     ]
   }}.
 

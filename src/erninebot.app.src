@@ -1,16 +1,17 @@
 {application, erninebot,
-    [
-        {description, ""},
-        {vsn, "1.0.0r1"},
-        {registered, []},
-        {applications, [
-            kernel,
-            stdlib
-        ]},
-        {mod, {erninebot_app, []}},
-        {env, [
-            {server, "172.17.0.1"},
-            {port, 6667},
-            {nickname, "ErNineBot"},
-            {channels, ["#ErNineTestChannel"]}]}
-    ]}.
+  [
+    {description, ""},
+    {vsn, "1.0.0r1"},
+    {registered, []},
+    {applications, [
+      kernel,
+      stdlib,
+      mnesia
+    ]},
+    {mod, {erninebot_app, []}},
+    {env, [
+      {server, "172.17.0.1"},
+      {port, 6667},
+      {nickname, "ErNineBot"},
+      {channels, ["#ErNineTestChannel"]}]}
+  ]}.
