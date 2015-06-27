@@ -6,7 +6,7 @@
 -include("dictionary.hrl").
 
 %% API
--export([start_link/0, init_database/0, insert_file/3]).
+-export([start_link/0, insert_file/3]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -54,6 +54,7 @@ start_link() ->
   {ok, State :: #state{}} | {ok, State :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
 init([]) ->
+  random:seed(erlang:time()),
   init_database(),
   enb_message_exchange_srv:subscribe(bot_command),
   {ok, #state{}}.
