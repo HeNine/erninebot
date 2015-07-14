@@ -1,15 +1,21 @@
+%% @doc
+%% Filter chain server is a gen_server, that can be called with a message and returns either the message or the atom
+%% 'filtered', if one of the filters in the chain returns false.
+%%
+%% @since 1.0
+%% @end
 -module(enb_filter_chain_srv).
 -behaviour(gen_server).
 -define(SERVER, ?MODULE).
 
--include("message.hrl").
-
 -record(state, {chain = []}).
 
-%% API
+-include("message.hrl").
+
+%% API Function Exports
 -export([start_link/2]).
 
-%% gen_server callbacks
+%% gen_server Function Exports
 -export([init/1,
   handle_call/3,
   handle_cast/2,
@@ -17,127 +23,78 @@
   terminate/2,
   code_change/3]).
 
+%% API Function Definitions
 
-%%%===================================================================
-%%% API
-%%%===================================================================
-
-%%--------------------------------------------------------------------
 %% @doc
-%% Starts the server
+%% Starts the server and returns its pid.
 %%
+%% The Name argument is the name of the server. The ChainSpec argument is a list of @{M, F, A@} tuples used to call
+%% filter functions. The message being filtered is prepended to A.
+%%
+%% @since 1.0
 %% @end
-%%--------------------------------------------------------------------
--spec(start_link(Name :: atom(), ChainSpec :: list({module(), atom(), list()})) ->
+-spec(start_link(Name :: atom(), ChainSpec :: list(mfa())) ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
+
 start_link(Name, ChainSpec) ->
   gen_server:start_link({local, Name}, ?MODULE, ChainSpec, []).
 
-%%%===================================================================
-%%% gen_server callbacks
-%%%===================================================================
+%% gen_server Function Definitions
 
-%%--------------------------------------------------------------------
 %% @private
 %% @doc
 %% Initializes the server
 %%
-%% @spec init(Args) -> {ok, State} |
-%%                     {ok, State, Timeout} |
-%%                     ignore |
-%%                     {stop, Reason}
 %% @end
-%%--------------------------------------------------------------------
 -spec(init(Args :: term()) ->
   {ok, State :: #state{}} | {ok, State :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
+
 init(Chain) ->
   {ok, #state{chain = Chain}}.
 
-%%--------------------------------------------------------------------
 %% @private
 %% @doc
-%% Handling call messages
+%% Filters a message
+%%
+%% Message is checked against the chain of filters and the result is returned.
 %%
 %% @end
-%%--------------------------------------------------------------------
--spec(handle_call(Request :: term(), From :: {pid(), Tag :: term()},
+-spec(handle_call(Message :: {filter, #message{}}, _From :: {pid(), Tag :: term()},
     State :: #state{}) ->
-  {reply, Reply :: term(), NewState :: #state{}} |
-  {reply, Reply :: term(), NewState :: #state{}, timeout() | hibernate} |
-  {noreply, NewState :: #state{}} |
-  {noreply, NewState :: #state{}, timeout() | hibernate} |
-  {stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
-  {stop, Reason :: term(), NewState :: #state{}}).
+  {reply, Reply :: ok | #message{} | filtered, NewState :: #state{}}).
+
 handle_call({filter, Message}, _From, State = #state{chain = Chain}) ->
   {reply, filter(Message, Chain), State};
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Handling cast messages
-%%
-%% @end
-%%--------------------------------------------------------------------
--spec(handle_cast(Request :: term(), State :: #state{}) ->
-  {noreply, NewState :: #state{}} |
-  {noreply, NewState :: #state{}, timeout() | hibernate} |
-  {stop, Reason :: term(), NewState :: #state{}}).
+%% @hidden
 handle_cast(_Request, State) ->
   {noreply, State}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Handling all non call/cast messages
-%%
-%% @spec handle_info(Info, State) -> {noreply, State} |
-%%                                   {noreply, State, Timeout} |
-%%                                   {stop, Reason, State}
-%% @end
-%%--------------------------------------------------------------------
--spec(handle_info(Info :: timeout() | term(), State :: #state{}) ->
-  {noreply, NewState :: #state{}} |
-  {noreply, NewState :: #state{}, timeout() | hibernate} |
-  {stop, Reason :: term(), NewState :: #state{}}).
+%% @hidden
 handle_info(_Info, State) ->
   {noreply, State}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% This function is called by a gen_server when it is about to
-%% terminate. It should be the opposite of Module:init/1 and do any
-%% necessary cleaning up. When it returns, the gen_server terminates
-%% with Reason. The return value is ignored.
-%%
-%% @spec terminate(Reason, State) -> void()
-%% @end
-%%--------------------------------------------------------------------
--spec(terminate(Reason :: (normal | shutdown | {shutdown, term()} | term()),
-    State :: #state{}) -> term()).
+%% @hidden
 terminate(_Reason, _State) ->
   ok.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Convert process state when code is changed
-%%
-%% @spec code_change(OldVsn, State, Extra) -> {ok, NewState}
-%% @end
-%%--------------------------------------------------------------------
--spec(code_change(OldVsn :: term() | {down, term()}, State :: #state{},
-    Extra :: term()) ->
-  {ok, NewState :: #state{}} | {error, Reason :: term()}).
+%% @hidden
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
-%%%===================================================================
-%%% Internal functions
-%%%===================================================================
+%% Internal Function Definitions
+
+%% @private
+%% @doc
+%% Accepts a message and a list of filter functions and applies them to the message. If any function returns 'false'
+%% filter return the atom 'filtered', otherwise it returns the original message.
+%%
+%% @end
+-spec(filter(#message{}, list(mfa())) ->
+  #message{} | filtered).
 
 filter(Message, [{M, F, A} | Chain]) ->
   case erlang:apply(M, F, [Message | A]) of

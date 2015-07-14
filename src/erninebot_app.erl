@@ -2,15 +2,31 @@
 
 -behaviour(application).
 
-%% Application callbacks
--export([start/2, stop/1]).
+%% application Function Exports
+-export([
+  start/2,
+  stop/1]).
 
-%% ===================================================================
-%% Application callbacks
-%% ===================================================================
+%% application Function Definitions
+
+%% @private
+%% @doc
+%% Application start
+%%
+%% @end
+-spec(start(term(), term()) ->
+  {ok, pid()} | {ok, pid(), term()} | {error, term()}).
 
 start(_StartType, _StartArgs) ->
-    erninebot_sup:start_link().
+  erninebot_sup:start_link().
+
+%% @private
+%% @doc
+%% Application stop
+%%
+%% @end
+-spec(stop(term()) ->
+  ignored).
 
 stop(_State) ->
-    ok.
+  ok.

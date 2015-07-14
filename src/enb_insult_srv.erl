@@ -1,93 +1,82 @@
+%% @doc
+%% A service that insults an enitity. (Badly.)
+%%
+%% The insult server is a service server that responds to a bot command "please insult &lt;string&gt;" with
+%% "&lt;string&gt;, you &lt;adjective&gt; &lt;noun&gt; &lt;verb&gt;ing &lt;noun&gt; &lt;verb&gt;er."
+%%
+%% @since 1.0
+%% @end
 -module(enb_insult_srv).
-
 -behaviour(gen_server).
+-define(SERVER, ?MODULE).
+
+-record(state, {}).
 
 -include("message.hrl").
 -include("dictionary.hrl").
 
-%% API
--export([start_link/0, insert_file/3]).
+%% API Function Exports
+-export([
+  start_link/0,
+  insert_file/3]).
 
-%% gen_server callbacks
--export([init/1,
+%% gen_server Function Exports
+-export([
+  init/1,
   handle_call/3,
   handle_cast/2,
   handle_info/2,
   terminate/2,
   code_change/3]).
 
--define(SERVER, ?MODULE).
+%% API Function Definitions
 
--record(state, {}).
-
-%%%===================================================================
-%%% API
-%%%===================================================================
-
-%%--------------------------------------------------------------------
 %% @doc
-%% Starts the server
+%% Starts the server and returns its pid.
 %%
+%% @since 1.0
 %% @end
-%%--------------------------------------------------------------------
 -spec(start_link() ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
+
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
-%%%===================================================================
-%%% gen_server callbacks
-%%%===================================================================
+%% gen_server Function Definitions
 
-%%--------------------------------------------------------------------
 %% @private
 %% @doc
 %% Initializes the server
 %%
-%% @spec init(Args) -> {ok, State} |
-%%                     {ok, State, Timeout} |
-%%                     ignore |
-%%                     {stop, Reason}
+%% Loads the word database
+%%
+%% @todo: Switch to rand
+%% @since 1.0
 %% @end
-%%--------------------------------------------------------------------
 -spec(init(Args :: term()) ->
   {ok, State :: #state{}} | {ok, State :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
-init([]) ->
-  random:seed(erlang:time()),
+
+init(_) ->
+  random:seed(erlang:phash2([node()]), erlang:monotonic_time(), erlang:unique_integer()),
   init_database(),
   enb_message_exchange_srv:subscribe(bot_command),
   {ok, #state{}}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Handling call messages
-%%
-%% @end
-%%--------------------------------------------------------------------
--spec(handle_call(Request :: term(), From :: {pid(), Tag :: term()},
-    State :: #state{}) ->
-  {reply, Reply :: term(), NewState :: #state{}} |
-  {reply, Reply :: term(), NewState :: #state{}, timeout() | hibernate} |
-  {noreply, NewState :: #state{}} |
-  {noreply, NewState :: #state{}, timeout() | hibernate} |
-  {stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
-  {stop, Reason :: term(), NewState :: #state{}}).
+%% @hidden
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
-%%--------------------------------------------------------------------
 %% @private
 %% @doc
-%% Handling cast messages
+%% Replies to 'please insult' commands
+%%
+%% On receiving a "&lt;command&gt;>, please insult &lt;string&gt;" replies with "please insult &lt;string&gt;" with "&lt;string&gt;,
+%% you &lt;adjective&gt; &lt;noun&gt; &lt;verb&gt;ing &lt;noun&gt; &lt;verb&gt;er."
 %%
 %% @end
-%%--------------------------------------------------------------------
 -spec(handle_cast(Request :: term(), State :: #state{}) ->
-  {noreply, NewState :: #state{}} |
-  {noreply, NewState :: #state{}, timeout() | hibernate} |
-  {stop, Reason :: term(), NewState :: #state{}}).
+  {noreply, NewState :: #state{}}).
 handle_cast({message, #message{last_param = MessageText, params = [Channel | _]}}, State) ->
   case re:run(MessageText, enb_basic_filters:bot_command_re() ++ "\s+please insult (.+)", [unicode, {capture, all, list}]) of
     {match, [_, User]} ->
@@ -105,56 +94,19 @@ handle_cast({message, #message{last_param = MessageText, params = [Channel | _]}
 handle_cast(_Request, State) ->
   {noreply, State}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Handling all non call/cast messages
-%%
-%% @spec handle_info(Info, State) -> {noreply, State} |
-%%                                   {noreply, State, Timeout} |
-%%                                   {stop, Reason, State}
-%% @end
-%%--------------------------------------------------------------------
--spec(handle_info(Info :: timeout() | term(), State :: #state{}) ->
-  {noreply, NewState :: #state{}} |
-  {noreply, NewState :: #state{}, timeout() | hibernate} |
-  {stop, Reason :: term(), NewState :: #state{}}).
+%% @hidden
 handle_info(_Info, State) ->
   {noreply, State}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% This function is called by a gen_server when it is about to
-%% terminate. It should be the opposite of Module:init/1 and do any
-%% necessary cleaning up. When it returns, the gen_server terminates
-%% with Reason. The return value is ignored.
-%%
-%% @spec terminate(Reason, State) -> void()
-%% @end
-%%--------------------------------------------------------------------
--spec(terminate(Reason :: (normal | shutdown | {shutdown, term()} | term()),
-    State :: #state{}) -> term()).
+%% @hidden
 terminate(_Reason, _State) ->
   ok.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Convert process state when code is changed
-%%
-%% @spec code_change(OldVsn, State, Extra) -> {ok, NewState}
-%% @end
-%%--------------------------------------------------------------------
--spec(code_change(OldVsn :: term() | {down, term()}, State :: #state{},
-    Extra :: term()) ->
-  {ok, NewState :: #state{}} | {error, Reason :: term()}).
+%% @hidden
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
-%%%===================================================================
-%%% Internal functions
-%%%===================================================================
+%% Internal Function Definitions
 
 init_database() ->
   mnesia:delete_table(noun),

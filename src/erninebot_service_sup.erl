@@ -1,52 +1,50 @@
+%% @doc
+%% Supervisor for services
+%%
+%% Service supervisor supervises the services offered by the bot to the users.
+%%
+%% @since 1.0
+%% @end
 -module(erninebot_service_sup).
-
 -behaviour(supervisor).
+-define(SERVER, ?MODULE).
+-define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
 
-%% API
+%% API Function Exports
 -export([start_link/0]).
 
-%% Supervisor callbacks
+%% supervisor Function Exports
 -export([init/1]).
 
 -define(SERVER, ?MODULE).
 -define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
 
-%%%===================================================================
-%%% API functions
-%%%===================================================================
+%% API Function Definitions
 
-%%--------------------------------------------------------------------
 %% @doc
-%% Starts the supervisor
+%% Starts the supervisor and returns its pid.
 %%
+%% @since 1.0
 %% @end
-%%--------------------------------------------------------------------
 -spec(start_link() ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
+
 start_link() ->
   supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
-%%%===================================================================
-%%% Supervisor callbacks
-%%%===================================================================
+%% supervisor Function Definitions
 
-%%--------------------------------------------------------------------
 %% @private
 %% @doc
-%% Whenever a supervisor is started using supervisor:start_link/[2,3],
-%% this function is called by the new process to find out about
-%% restart strategy, maximum restart frequency and child
-%% specifications.
+%% Initializes the supervisor
 %%
 %% @end
-%%--------------------------------------------------------------------
 -spec(init(Args :: term()) ->
   {ok, {SupFlags :: {RestartStrategy :: supervisor:strategy(),
     MaxR :: non_neg_integer(), MaxT :: non_neg_integer()},
     [ChildSpec :: supervisor:child_spec()]
-  }} |
-  ignore |
-  {error, Reason :: term()}).
+  }} | ignore | {error, Reason :: term()}).
+
 init(_Args) ->
   {ok, {{one_for_one, 5, 10},
     [
@@ -56,6 +54,4 @@ init(_Args) ->
   }}.
 
 
-%%%===================================================================
-%%% Internal functions
-%%%===================================================================
+%% Internal Function Definitions

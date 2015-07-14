@@ -1,20 +1,71 @@
+%% @doc
+%% Message parsing functions.
+%%
+%% This module contains the functionality for parsing incoming messages and converting outgoing messages to binary
+%% strings.
+%%
+%% The functions in this module should not be used directly, but rather through {@link enb_uparser_srv} to allow for
+%% crashes.
+%%
+%% @todo: Ensure `Message = parse(unparse(Message))' and `Message = unparse(parse(Message))'.
+%% @since 1.0
+%% @end
 -module(enb_message_parser).
+
 -include("message.hrl").
 
-%% API
--export([parse/1, unparse/3, unparse/1]).
+%% API Function Exports
+-export([
+  parse/1,
+  unparse/3,
+  unparse/1]).
+
+%% @doc
+%% Parses the message into a message record
+%%
+%% This is the basic parsing function that takes the message string and returns a `#message{}' record.
+%%
+%% @since 1.0
+%% @end
+-spec(parse(Message :: string()) ->
+  #message{}).
 
 parse(Message) ->
+  %% Split off the last parameter
   [Body | RawLastParam] = re:split(Message, " :", [{return, list}, {parts, 2}]),
+  %% Remove \r\n
   LastParam = case re:run(RawLastParam, "(.*)\r\n", [unicode, {capture, all, list}]) of
                 {match, [_, CapturedLastParam]} -> CapturedLastParam;
                 nomatch -> []
               end,
+  %% Split the rest of the message by space
   SplitMessage = re:split(Body, " ", [{return, list}]),
   parser(SplitMessage, {start, #message{last_param = LastParam, original = Message}}).
 
+%% @doc
+%% Takes `#message{}' and returns an equivalent string
+%%
+%% Unparses a `#message{}' record unto a binary string that can be sent to the IRC server.
+%%
+%% @see unparse/3
+%% @since 1.0
+%% @end
+-spec(unparse(Message :: #message{}) ->
+  binary()).
+
 unparse(#message{command = Command, params = Params, last_param = Last}) ->
   unparse(Command, Params, Last).
+
+%% @doc
+%% Takes a commans, parameters and a last parameter and return an IRC message string
+%%
+%% This function provides the unparsing functionality without the need for a `#message{}' record.
+%%
+%% @since 1.0
+%% @end
+-spec(unparse(Command :: atom(), Parameres :: list(string()), LastParameter :: string()) ->
+  binary()).
+
 unparse(Command, Parameters, LastParameter) ->
   CommandBinary = list_to_binary(atom_to_command(Command)),
   JoinedBinary = list_to_binary(string:join(Parameters, " ")),
@@ -26,18 +77,33 @@ unparse(Command, Parameters, LastParameter) ->
     _ -> <<CommandBinary/binary, " ", JoinedBinary/binary, " :", LastBinary/binary, $\r, $\n>>
   end.
 
+%% @private
+%% @doc
+%% Parsing state machine
+%%
+%% Parses a message string into a `#message{}' record.
+%%
+%% @end
 %% parser(Input,{State,Message})
+-spec(parser(Input :: string(), {atom(), Message :: #message{}}) ->
+  #message{}).
+
+%% Start of parsing
 parser([In | Input], {start, Message}) ->
   case In of
+  %% Parse the origin prefix, if any
     [C | Prefix] when C == $: ->
       parser([Prefix | Input], {prefix, Message});
+  %% If there is no prefix, proceed to parsing the command
     In ->
       case re:run(In, "[a-zA-Z]+|[0-9]{3}", [{capture, none}]) of
         match -> parser([In | Input], {command, Message})
       end
   end;
 
+%% Parse the origin prefix
 parser([In | Input], {prefix, Message}) ->
+  %% Prefix is servername
   case re:run(In,
     "^([0-9a-zA-Z][0-9A-Za-z-]*[0-9a-zA-Z]*(?:\\.[0-9a-zA-Z][0-9A-Za-z-]*[0-9a-zA-Z]*)*)$",
     [{capture, all_but_first, list}])
@@ -45,28 +111,31 @@ parser([In | Input], {prefix, Message}) ->
     {match, [Servername]} ->
       parser(Input, {command, Message#message{prefix = #serverspec{servername = Servername}}});
     nomatch ->
+      %% Prefix is user
       case re:run(In,
         "^([a-zA-Z\\x5B-\\x60\\x7B-\\x7D][0-9a-zA-Z\\x5B-\\x60\\x7B-\\x7D-]*)" ++
           "(?:(?:!([\\x01-\\x09\\x0B-\\x0C\\x0E-\\x0F\\x21-\\x3F\\x41-\\xFF]+))?" ++
           "@([0-9a-zA-Z][0-9A-Za-z-]*[0-9a-zA-Z]*(?:\\.[0-9a-zA-Z][0-9A-Za-z-]*[0-9a-zA-Z]*)*|" ++
           "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}|" ++
-          %% Place for IPv6 support *ugh*
+          %% todo: IPv6 support *ugh*
           "))?$",
         [{capture, all_but_first, list}]
       )
       of
         {match, [Nickname, User, Host]} ->
-          parser(Input, {command, Message#message{prefix = #userspec{nickname = Nickname, user = User, host =
-          Host}}})
+          parser(Input, {command, Message#message{prefix = #userspec{nickname = Nickname, user = User, host = Host}}})
       end
   end;
 
+%% Parse the IRC command
 parser([In | Input], {command, Message}) ->
   case re:run(In, "^([a-zA-Z]+|[0-9]{3})$", [{capture, all_but_first, list}]) of
     {match, [Command]} -> parser(Input, {parameters, Message#message{command = command_to_atom(Command)}})
   end;
 
+%% There are no parameters; return the parsed message
 parser([], {parameters, Message}) -> Message;
+%% There are parameters
 parser([In | Input], {parameters, Message = #message{params = Params}}) ->
   case re:run(
     In,
@@ -75,8 +144,20 @@ parser([In | Input], {parameters, Message = #message{params = Params}}) ->
     [{capture, all_but_first, list}])
   of
     {match, [Parameter]} -> parser(Input, {parameters, Message#message{params = Params ++ [Parameter]}});
+  %% todo: actual logging
     nomatch -> io:format("~s~n", [In])
   end.
+
+%% @private
+%% @doc
+%% Converts a command string to atom
+%%
+%% Used for parsing IRC commands. Converts the string form to atoms. Numeric codes are converted to text forms.
+%%
+%% @since 1.0
+%% @end
+-spec(command_to_atom(Command :: string()) ->
+  atom()).
 
 command_to_atom(Command) ->
   case string:to_upper(Command) of
@@ -351,6 +432,15 @@ command_to_atom(Command) ->
     "515" -> err_nounidentified;
     "516" -> err_last_err_msg
   end.
+
+%% @private
+%% @doc
+%% Converts atoms to IRC commands. Used for unparsing messages.
+%%
+%% @since 1.0
+%% @end
+-spec(atom_to_command(Atom :: atom()) ->
+  string()).
 
 atom_to_command(Atom) ->
   case Atom of

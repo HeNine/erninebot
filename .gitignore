@@ -13,3 +13,8 @@ ebin
 .concrete/DEV_MODE
 .rebar
 dict
+
+/doc/*.html
+/doc/*.css
+/doc/*.png
+/doc/edoc-info
