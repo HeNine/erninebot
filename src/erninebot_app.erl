@@ -4,6 +4,7 @@
 
 %% application Function Exports
 -export([
+  start/0,
   start/2,
   stop/1]).
 
@@ -14,7 +15,12 @@
 %% Application start
 %%
 %% @end
--spec(start(term(), term()) ->
+-spec(start() ->
+  {ok, pid()} | {ok, pid(), term()} | {error, term()}).
+start() ->
+  start(normal, []).
+
+-spec(start(normal|{takeover|failover, node()}, term()) ->
   {ok, pid()} | {ok, pid(), term()} | {error, term()}).
 
 start(_StartType, _StartArgs) ->
