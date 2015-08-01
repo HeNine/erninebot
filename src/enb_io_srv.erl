@@ -54,7 +54,7 @@ init(_Args) ->
   {ok, Server} = application:get_env(erninebot, server),
   {ok, Port} = application:get_env(erninebot, port),
   {ok, Nickname} = application:get_env(erninebot, nickname),
-  gen_server:cast(enb_message_exchange_srv, {subscribe, self(), rpl_welcome}),
+  enb_message_exchange_srv:subscribe(rpl_welcome),
   gen_server:cast(self(), {connect}),
   {ok, #state{server = Server, port = Port, nickname = Nickname}}.
 
@@ -130,7 +130,7 @@ handle_cast({send_message, RawMessage}, State = #state{state = handshake_complet
 %%
 %% @end
 handle_info({tcp, _Socket, Data}, State) ->
-  gen_server:cast(enb_message_exchange_srv, {message_in, binary_to_list(Data)}),
+  enb_parser_srv:receive_message(binary_to_list(Data)),
   {noreply, State};
 handle_info({tcp_closed, _Socket}, State) ->
   {noreply, State};

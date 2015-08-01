@@ -127,16 +127,18 @@ handle_cast({subscribe, Pid, Command}, State = #state{subscriptions = Subs}) ->
   {noreply, State#state{subscriptions = maps:put(Command, [Pid | Existing], Subs)}};
 
 %% Incoming message to be distributed to subscribed servers
-handle_cast({message_in, RawMessage}, State = #state{subscriptions = Subs, filter_chains = Chains}) ->
-  Message = gen_server:call(enb_parser_srv, {parse, RawMessage}),
+handle_cast({message_in, Message}, State = #state{subscriptions = Subs, filter_chains = Chains}) ->
+%%   Message = gen_server:call(enb_parser_srv, {parse, RawMessage}),
   maps:map(fun(Chain, FilterServer) -> distribute(Message, maps:get(Chain, Subs, []), FilterServer) end, Chains),
   {noreply, State};
 
 %% Sends message Message
-handle_cast({message_out, Message}, State) ->
-  RawMessage = gen_server:call(enb_parser_srv, {unparse, Message}),
-  io:format("~s", [RawMessage]),
-  gen_server:cast(enb_io_srv, {send_message, RawMessage}),
+handle_cast({message_out, Message}, State = #state{subscriptions = Subs, filter_chains = Chains}) ->
+%%   RawMessage = gen_server:call(enb_parser_srv, {unparse, Message}),
+  maps:map(fun(Chain, FilterServer) ->
+    distribute(Message#message{original = enb_parser_srv:unparse(Message)}, maps:get(Chain, Subs, []), FilterServer) end, Chains),
+%%   gen_server:cast(enb_parser_srv, {send_message, Message}),
+  enb_parser_srv:send_message(Message),
   {noreply, State}.
 
 %% @hidden

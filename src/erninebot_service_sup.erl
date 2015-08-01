@@ -16,9 +16,6 @@
 %% supervisor Function Exports
 -export([init/1]).
 
--define(SERVER, ?MODULE).
--define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
-
 %% API Function Definitions
 
 %% @doc

@@ -3,6 +3,9 @@
 %%
 %% To ensure that the whole bot doesn't crash if a message fails to parse, the parsing functionality is available in a
 %% server.
+%%
+%% @since 1.0
+%% @end
 -module(enb_parser_srv).
 -behaviour(gen_server).
 -define(SERVER, ?MODULE).
@@ -14,7 +17,9 @@
 %% API Function Exports
 -export([
   start_link/0,
-  unparse/1]).
+  unparse/1,
+  send_message/1,
+  receive_message/1]).
 
 %% gen_server Function Exports
 -export([
@@ -32,6 +37,8 @@
 %%
 %% @since 1.0
 %% @end
+-spec(start_link() ->
+  {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
@@ -42,8 +49,31 @@ start_link() ->
 %% @end
 -spec(unparse(Message :: #message{}) ->
   binary()).
+
 unparse(Message) ->
-  gen_server:call(enb_parser_srv, {unparse, Message}).
+  gen_server:call(?SERVER, {unparse, Message}).
+
+%% @doc
+%% Send a message to IRC server
+%%
+%% @since 1.0
+%% @end
+-spec(send_message(Message :: #message{}) ->
+  ok).
+
+send_message(Message) ->
+  gen_server:cast(?SERVER, {send_message, Message}).
+
+%% @doc
+%% Receive a message from IRC server
+%%
+%% @since 1.0
+%% @end
+-spec(receive_message(RawMessage :: string()) ->
+  ok).
+
+receive_message(RawMessage) ->
+  gen_server:cast(?SERVER, {receive_message, RawMessage}).
 
 %% gen_server Function Definitions
 
@@ -62,9 +92,11 @@ init(_) ->
 %% @doc
 %% Calls functions from {@link enb_message_parser}
 %%
+%% Server may crash.
+%%
 %% @see enb_message_parser
 %% @end
--spec(handle_call(Message :: {parse | unparse, #message{} | string()}, _ :: {pid(), Tag}, State :: #state{}) ->
+-spec(handle_call(Message :: {parse | unparse, #message{} | string()}, _ :: {pid(), _}, State :: #state{}) ->
   {noreply, State :: #state{}}).
 
 handle_call({parse, RawMessage}, _, State) ->
@@ -74,8 +106,23 @@ handle_call({unparse, Message}, _, State) ->
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
-%% @hidden
-handle_cast(_Msg, State) ->
+%% @private
+%% @doc
+%% Calls functions from {@link enb_message_parser}
+%%
+%% @see enb_message_parser
+%% @end
+-spec(handle_cast(Message :: {message, #message{}}, State :: #state{}) ->
+  {noreply, State :: #state{}}).
+
+%% Incoming message from enb_io_serv
+handle_cast({receive_message, RawMessage}, State) ->
+  gen_server:cast(enb_message_exchange_srv, {message_in, enb_message_parser:parse(RawMessage)}),
+  {noreply, State};
+
+%% Outgoing message from enb_message_exchange_srv
+handle_cast({send_message, Message}, State) ->
+  gen_server:cast(enb_io_srv, {send_message, enb_message_parser:unparse(Message)}),
   {noreply, State}.
 
 %% @hidden
