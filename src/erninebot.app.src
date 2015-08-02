@@ -1,7 +1,7 @@
 {application, erninebot,
   [
-    {description, ""},
-    {vsn, "1.0.0r1"},
+    {description, "ErNineBot is an IRC bot."},
+    {vsn, git},
     {registered, []},
     {applications, [
       kernel,
